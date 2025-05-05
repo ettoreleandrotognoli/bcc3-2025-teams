@@ -13,3 +13,5 @@ Rafael Rodrigues Magdaleno - 2000649
 Jeann Garçoni Alves - 2019032
 
 Rafael Ribeiro dos Santos - 2000630
+
+Otávio Domingues Vaz - 1999886 
