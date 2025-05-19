@@ -1,3 +1,0 @@
-# Mock Team
-
-Ettore
