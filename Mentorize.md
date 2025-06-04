@@ -15,3 +15,5 @@ Jeann Garçoni Alves - 2019032
 Rafael Ribeiro dos Santos - 2000630
 
 Otávio Domingues Vaz - 1999886 
+
+Vitor Colonello Soares - 2002727
