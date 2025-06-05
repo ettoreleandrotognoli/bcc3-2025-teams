@@ -1,0 +1,22 @@
+# Dockerfile para o backend Nest.js
+FROM node:18-alpine AS base
+
+# Instalar dependências necessárias
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# Copiar código fonte
+COPY . .
+
+# Build da aplicação
+RUN npm run build
+
+# Expor porta
+EXPOSE 3001
+
+# Comando para iniciar a aplicação
+CMD ["npm", "run", "start:prod"]
