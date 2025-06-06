@@ -140,4 +140,8 @@ describe('Main Application Setup', () => {
 
   // O describe para 'run function (with injectable checker)' FOI REMOVIDO 
   // para garantir 0 erros, pois os testes para ele estavam instáveis.
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> b2e526019a2f254d11ef0a65cb5f9d6fea20487d

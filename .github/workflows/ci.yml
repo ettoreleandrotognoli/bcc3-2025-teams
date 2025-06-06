@@ -1,0 +1,35 @@
+name: CI Pipeline - Mentorize App
+
+on:
+  push:
+    branches: [ main, develop ] # Será acionado em pushes para 'main' ou 'develop'
+  pull_request:
+    branches: [ main, develop ] # Será acionado em pull requests para 'main' ou 'develop'
+
+jobs:
+  ci:
+    name: CI Backend e Frontend
+    runs-on: ubuntu-latest # Usará uma máquina virtual Linux para rodar os passos
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4 # Ação para baixar seu código para a máquina virtual
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4 # Ação para configurar o Node.js
+        with:
+          node-version: '20' # Especifique a versão do Node.js que seu projeto usa
+          cache: 'npm' # Habilita o cache de dependências do npm para acelerar builds futuras
+          cache-dependency-path: package-lock.json # Caminho para o arquivo de lock para o cache
+
+      - name: Instalar dependências (Monorepo Root)
+        # Este comando usa o package.json e package-lock.json da raiz
+        # e instala dependências para api-project e frontend.
+        run: npm ci
+
+      - name: Testes Cobertura Backend (api-project)
+        # Executa o script 'test:cov' do package.json dentro de 'api-project'
+        run: npm run test:cov -w api-project
+
+      - name: Testes Frontend (frontend) - Pulado
+        # Como você decidiu não rodar testes no frontend por agora
+        run: echo "Passo de teste do frontend pulado conforme configurado."
