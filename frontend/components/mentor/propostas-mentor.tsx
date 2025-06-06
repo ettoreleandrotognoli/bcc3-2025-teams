@@ -1,163 +1,233 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, CheckCircle2, XCircle } from "lucide-react"
-import { DetalhesProposta } from "@/components/mentor/detalhes-proposta"
+
+interface Proposal {
+  id: number | string
+  createdAt: string
+  updatedAt: string
+  description: string
+  duration: number
+  isConfirmed: boolean
+  student: {
+    id: number
+    email: string
+    avatar?: string
+  }
+  mentor: {
+    id: number
+    email: string
+  }
+}
 
 interface PropostasMentorProps {
   limit?: number
 }
 
-export function PropostasMentor({ limit }: PropostasMentorProps) {
-  const [selectedProposal, setSelectedProposal] = useState<string | null>(null)
+function getInitials(email?: string) {
+  if (!email) return "??"
+  return email.split("@")[0].substring(0, 2).toUpperCase()
+}
 
-  const proposals = [
-    {
-      id: "1",
-      student: {
-        name: "João Silva",
-        avatar: "/placeholder.svg?height=40&width=40&text=JS",
-        level: "Graduação - 3º semestre",
-      },
-      subject: "Cálculo I",
-      topic: "Derivadas e Integrais",
-      date: "Hoje, 18:00 - 19:30",
-      message:
-        "Preciso de ajuda com exercícios de derivadas parciais e integrais múltiplas para a prova da próxima semana.",
-      status: "pending",
-      created: "Há 2 horas",
-    },
-    {
-      id: "2",
-      student: {
-        name: "Maria Oliveira",
-        avatar: "/placeholder.svg?height=40&width=40&text=MO",
-        level: "Graduação - 2º semestre",
-      },
-      subject: "Álgebra Linear",
-      topic: "Transformações Lineares",
-      date: "Amanhã, 14:00 - 15:30",
-      message:
-        "Estou com dificuldades para entender transformações lineares e suas aplicações. Preciso de exemplos práticos.",
-      status: "pending",
-      created: "Há 5 horas",
-    },
-    {
-      id: "3",
-      student: {
-        name: "Pedro Santos",
-        avatar: "/placeholder.svg?height=40&width=40&text=PS",
-        level: "Graduação - 4º semestre",
-      },
-      subject: "Cálculo II",
-      topic: "Equações Diferenciais",
-      date: "Quinta, 16:00 - 17:30",
-      message: "Preciso revisar equações diferenciais de primeira e segunda ordem para um projeto de engenharia.",
-      status: "pending",
-      created: "Há 1 dia",
-    },
-    {
-      id: "4",
-      student: {
-        name: "Carla Mendes",
-        avatar: "/placeholder.svg?height=40&width=40&text=CM",
-        level: "Graduação - 1º semestre",
-      },
-      subject: "Cálculo I",
-      topic: "Limites e Continuidade",
-      date: "Sexta, 10:00 - 11:30",
-      message: "Sou iniciante e estou tendo dificuldades com os conceitos básicos de limites e continuidade.",
-      status: "pending",
-      created: "Há 1 dia",
-    },
-    {
-      id: "5",
-      student: {
-        name: "Lucas Ferreira",
-        avatar: "/placeholder.svg?height=40&width=40&text=LF",
-        level: "Graduação - 5º semestre",
-      },
-      subject: "Estatística",
-      topic: "Testes de Hipóteses",
-      date: "Sábado, 15:00 - 16:30",
-      message: "Preciso de ajuda para entender como aplicar testes de hipóteses em um projeto de pesquisa.",
-      status: "pending",
-      created: "Há 2 dias",
-    },
-  ]
+function formatDate(dateString?: string) {
+  if (!dateString) return ""
+  return new Date(dateString).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+}
+
+function formatDuration(minutes?: number) {
+  if (!minutes) return "Duração não informada"
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  if (hours > 0) {
+    return `${hours}h${mins > 0 ? `${mins}min` : ""}`
+  }
+  return `${mins}min`
+}
+
+export function PropostasMentor({ limit }: PropostasMentorProps) {
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [selectedProposal, setSelectedProposal] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchProposals() {
+      setLoading(true)
+      setError(null)
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) throw new Error("Usuário não autenticado")
+
+        const response = await axios.get("http://localhost:3001/mentorships", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!Array.isArray(response.data)) {
+          throw new Error("Formato inesperado dos dados: esperado um array")
+        }
+
+        setProposals(response.data)
+      } catch (err: any) {
+        setError(err.message || "Erro desconhecido")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProposals()
+  }, [])
+
+  async function confirmarProposta(id: number | string) {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) throw new Error("Token não encontrado")
+
+      await axios.patch(
+        `http://localhost:3001/mentorships/${id}/confirm`,
+        {}, // Não precisa enviar isConfirmed no body se a API só espera o patch para confirmar
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+
+      setProposals((prev) =>
+        prev.map((proposal) =>
+          proposal.id === id ? { ...proposal, isConfirmed: true } : proposal
+        )
+      )
+      alert("Proposta confirmada com sucesso!")
+    } catch (error: any) {
+      alert(`Erro ao confirmar proposta: ${error.message || "Erro desconhecido"}`)
+    }
+  }
 
   const displayProposals = limit ? proposals.slice(0, limit) : proposals
+  const selected = proposals.find((p) => p.id.toString() === selectedProposal)
+
+  if (loading) {
+    return <p>Carregando propostas...</p>
+  }
+
+  if (error) {
+    return <p className="text-destructive">Erro: {error}</p>
+  }
 
   return (
     <div className="space-y-4">
-      {displayProposals.map((proposal) => (
-        <Card key={proposal.id} className="overflow-hidden">
-          <div className="h-1 bg-primary" />
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex gap-4">
-                <Avatar className="h-12 w-12 border-2 border-background">
-                  <AvatarImage src={proposal.student.avatar || "/placeholder.svg"} alt={proposal.student.name} />
-                  <AvatarFallback>
-                    {proposal.student.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-bold">{proposal.student.name}</h3>
-                  <p className="text-sm text-muted-foreground">{proposal.student.level}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="bg-primary/10 text-primary">
-                      {proposal.subject}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{proposal.created}</span>
+      {displayProposals.map((proposal) => {
+        if (!proposal.student) {
+          // Ignorar propostas inválidas
+          return null
+        }
+
+        return (
+          <Card key={proposal.id} className="overflow-hidden">
+            <div className="h-1 bg-primary" />
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex gap-4">
+                  <Avatar className="h-12 w-12 border-2 border-background">
+                    <AvatarImage src={proposal.student.avatar || "/placeholder.svg"} alt={proposal.student.email} />
+                    <AvatarFallback>{getInitials(proposal.student.email)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="font-bold">{proposal.student.email || "Email indisponível"}</h3>
+                    <p className="text-sm text-muted-foreground">Estudante</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="bg-primary/10 text-primary">
+                        Mentoria
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{formatDate(proposal.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:text-right">
+                  <div className="flex items-center md:justify-end text-sm gap-1">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatDate(proposal.updatedAt)}</span>
+                  </div>
+                  <div className="flex items-center md:justify-end text-sm gap-1">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatDuration(proposal.duration)}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2 md:text-right">
-                <div className="flex items-center md:justify-end text-sm gap-1">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{proposal.date}</span>
-                </div>
-                <div className="flex items-center md:justify-end text-sm gap-1">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>1h30min</span>
-                </div>
+              <div className="mt-4">
+                <p className="text-sm line-clamp-2">{proposal.description || "Sem descrição disponível"}</p>
               </div>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-sm line-clamp-2">{proposal.message}</p>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between p-6 pt-0">
-            <Button variant="outline" className="w-1/2" onClick={() => setSelectedProposal(proposal.id)}>
-              Ver detalhes
-            </Button>
-            <div className="flex gap-2 w-1/2">
-              <Button variant="outline" className="w-1/2" size="icon">
-                <XCircle className="h-4 w-4 text-destructive" />
+            </CardContent>
+            <CardFooter className="flex justify-between p-6 pt-0">
+              <Button variant="outline" className="w-1/2" onClick={() => setSelectedProposal(proposal.id.toString())}>
+                Ver detalhes
               </Button>
-              <Button className="w-1/2 bg-primary hover:bg-primary/90" size="icon">
-                <CheckCircle2 className="h-4 w-4" />
+              <div className="flex gap-2 w-1/2">
+                <Button variant="outline" className="w-1/2" size="icon" onClick={() => alert("Rejeitar não implementado")}>
+                  <XCircle className="h-4 w-4 text-destructive" />
+                </Button>
+                <Button
+                  className="w-1/2 bg-primary hover:bg-primary/90"
+                  size="icon"
+                  onClick={() => confirmarProposta(proposal.id)}
+                  disabled={proposal.isConfirmed}
+                  title={proposal.isConfirmed ? "Confirmado" : "Confirmar proposta"}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardFooter>
+          </Card>
+        )
+      })}
+
+      {selected && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 className="font-bold text-lg mb-4">Detalhes da Proposta</h3>
+            <div className="space-y-3">
+              <p>
+                <strong>Estudante:</strong> {selected.student.email}
+              </p>
+              <p>
+                <strong>Descrição:</strong> {selected.description || "Sem descrição"}
+              </p>
+              <p>
+                <strong>Duração:</strong> {formatDuration(selected.duration)}
+              </p>
+              <p>
+                <strong>Data:</strong> {formatDate(selected.createdAt)}
+              </p>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <Button variant="outline" onClick={() => setSelectedProposal(null)}>
+                Fechar
+              </Button>
+              <Button
+                className="bg-primary hover:bg-primary/90"
+                onClick={() => {
+                  confirmarProposta(selected.id)
+                  setSelectedProposal(null)
+                }}
+                disabled={selected.isConfirmed}
+              >
+                {selected.isConfirmed ? "Confirmado" : "Aceitar"}
               </Button>
             </div>
-          </CardFooter>
-        </Card>
-      ))}
-
-      {selectedProposal && (
-        <DetalhesProposta
-          proposal={proposals.find((p) => p.id === selectedProposal)!}
-          onClose={() => setSelectedProposal(null)}
-        />
+          </div>
+        </div>
       )}
     </div>
   )

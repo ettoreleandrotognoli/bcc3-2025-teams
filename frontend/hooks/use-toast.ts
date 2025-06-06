@@ -1,6 +1,6 @@
 "use client"
 
-
+// Inspired by react-hot-toast library
 import * as React from "react"
 
 import type {
@@ -158,7 +158,7 @@ function toast({ ...props }: Toast) {
       ...props,
       id,
       open: true,
-      onOpenChange: (open: any) => {
+      onOpenChange: (open) => {
         if (!open) dismiss()
       },
     },

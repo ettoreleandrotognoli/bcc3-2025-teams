@@ -1,4 +1,5 @@
-import { AlimentacaoMentor } from "@/components/alimentacao-mentor"
+
+import AlimentacaoMentor from "@/components/alimentacao-mentor"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 
